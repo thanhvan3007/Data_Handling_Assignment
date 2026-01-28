@@ -12,7 +12,7 @@ Firstly, load necessary libray
 library(tidyverse)
 library(ggplot2)
 install.packages("dplyr")
-
+library(dplyr)
 eruptions <- read.csv("eruptions.csv")
 volcano <- read.csv("volcano.csv")
 tree_rings <- read.csv("tree_rings.csv")
@@ -21,11 +21,23 @@ sulfur <- read.csv("sulfur.csv")
 
 str(eruptions)
 head(eruptions)
+View(eruptions)
+View(volcano)
+View(tree_rings)
 
-
+vol1 <- eruptions %>% 
+  filter(eruption_category == "Confirmed Eruption") %>% 
+  filter(vei !="NA") %>% 
+  select(volcano_name, vei, start_year)
+vol1
+str(vol1)
+as.factor(vol1$start_year)
+vol1
+plot1 <- vol1 %>% 
+  ggplot(mapping = aes(x= start_year, y= vei) + 
+           geom_point(aes(start_year, vei))
+plot1
 ```
-
-
 
 ## Quarto
 
