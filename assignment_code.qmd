@@ -6,39 +6,88 @@ editor: visual
 code-fold: false
 ---
 
-Firstly, load necessary libray
+Firstly, load necessary library
 
 ```{r}
 library(tidyverse)
 library(ggplot2)
-install.packages("dplyr")
+#install.packages("dplyr")
 library(dplyr)
+
+```
+```{r}
 eruptions <- read.csv("eruptions.csv")
-volcano <- read.csv("volcano.csv")
-tree_rings <- read.csv("tree_rings.csv")
-sulfur <- read.csv("sulfur.csv")
+#volcano <- read.csv("volcano.csv")
+#tree_rings <- read.csv("tree_rings.csv")
+#sulfur <- read.csv("sulfur.csv")
 
 
 str(eruptions)
-head(eruptions)
+#head(eruptions)
 View(eruptions)
-View(volcano)
-View(tree_rings)
+#View(volcano)
+#View(tree_rings)
 
-vol1 <- eruptions %>% 
+eruptions_2000s <- eruptions %>% 
   filter(eruption_category == "Confirmed Eruption") %>% 
+  filter(start_year > 2000) %>% 
   filter(vei !="NA") %>% 
+  group_by(start_year) %>% 
   select(volcano_name, vei, start_year)
+
+post2000 <- eruptions_2000s %>% count(start_year, sort = TRUE)
+as.character(post2000$start_year)
+str(post2000)
+
+ggplot(post2000, mapping = aes(start_year, n)) + geom_bar(stat="identity",
+                                                          )
+
+
+eruptions_short
+as.character(eruptions_short$start_year)
+str(eruptions)
+str(eruptions_short)
+
+
+
 vol1
-str(vol1)
-as.factor(vol1$start_year)
-vol1
-plot1 <- vol1 %>% 
-  ggplot(mapping = aes(x= start_year, y= vei) + 
+plot1 <- eruptions_short %>% 
+  ggplot(aes(x= start_year, y= vei, colour = "red"))+ 
            geom_point(aes(start_year, vei))
 plot1
+
+eruption_wide <- eruptions_short %>% 
+  distinct() %>% 
+  pivot_wider(names_from = start_year, values_from = vei)
+eruption_wide
+
+```
+## make wide talbe 
+
+```{r}
+
+eruption_wide2 <- eruptions %>% 
+  select(volcano_name, eruption_category, start_year)
+
+eruption_wide3 <- eruption_wide2 %>% 
+  group_by(eruption_category) %>% 
+  mutate(row = row_number()) %>% 
+  select(volcano_name, eruption_category, start_year, row) %>% 
+  pivot_wider(names_from = eruption_category, values_from = start_year) %>% 
+  select(-row)
+
+
+eruption_wide3
+
+
+
 ```
 
+```{r}
+
+unique(eruptions$volcano_name)
+
+```
 ## Quarto
 
 Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
