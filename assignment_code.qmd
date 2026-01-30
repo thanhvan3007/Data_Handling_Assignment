@@ -1,7 +1,8 @@
 ---
 title: "Assginment"
+subtitle: "Data handlings and high-quality illustration for publication"
 author: Van Thanh Pham
-format: html
+format: pptx
 editor: visual
 code-fold: false
 ---
@@ -16,32 +17,59 @@ library(dplyr)
 
 ```
 ```{r}
-eruptions <- read.csv("eruptions.csv")
-#volcano <- read.csv("volcano.csv")
+eruptions <- read.csv("eruptions.csv") #read eruption.csv
+volcano <- read.csv("volcano.csv")
 #tree_rings <- read.csv("tree_rings.csv")
 #sulfur <- read.csv("sulfur.csv")
 
 
-str(eruptions)
+str(eruptions) #check the structure of data. 
 #head(eruptions)
 View(eruptions)
 #View(volcano)
 #View(tree_rings)
 
+eruptions_vocalno <- bind_cols(eruptions, volcano)
+
 eruptions_2000s <- eruptions %>% 
-  filter(eruption_category == "Confirmed Eruption") %>% 
-  filter(start_year > 2000) %>% 
-  filter(vei !="NA") %>% 
-  group_by(start_year) %>% 
-  select(volcano_name, vei, start_year)
+  filter(eruption_category == "Confirmed Eruption") %>%  #only consider the confirmed eruptions
+  filter(start_year > 2000) %>%       #cut parts of 21st century
+  filter(vei !="NA") %>%            #only consider the known "vei" 
+  group_by(start_year) %>%
+  select(volcano_name, vei, start_year,start_month, start_day, end_year, end_month, end_day) %>% 
+  mutate('start_date'=make_date(year=start_year, month=start_month, day=start_day)) %>% 
+  mutate('end_date'=make_date(year=end_year, month=end_month, day=end_day)) %>% 
+  mutate('daycount' = difftime(end_date, start_date, units = "days"))
+
+
+as.numeric(eruptions_2000s$daycount) 
+
+eruptions_2000s %>% ggplot(mapping=aes(x=start_year, y=daycount)) +geom_point()
+  
+#bind_cols(eruptions_2000s, volcano)
+
+         
+         
+  #unite(start_date, start_year, start_month, start_day, sep="-") %>% 
+  #unite(end_date, end_year, end_month, end_day, sep="-")
+
+head(eruptions_2000s)
+#View(eruptions_2000s)
+
+str(eruptions_2000s$end_date)
+as.Date(eruptions_2000s$start_date)
+as.Date(eruptions_2000s$end_date)
+str(eruptions_2000s)
+mutate(eruptions_2000s,daycount = difftime(eruptions_2000s$end_date, eruptions_2000s$start_date, units = "days"))
 
 post2000 <- eruptions_2000s %>% count(start_year, sort = TRUE)
 as.character(post2000$start_year)
 str(post2000)
 
 ggplot(post2000, mapping = aes(start_year, n)) + geom_bar(stat="identity",
-                                                          )
-
+                                                          mapping = aes(fill=start_year))
+str(eruptions_2000s)
+ggplot(eruptions_2000s, mapping = aes(start_year, vei)) + geom_point()
 
 eruptions_short
 as.character(eruptions_short$start_year)
@@ -50,11 +78,11 @@ str(eruptions_short)
 
 
 
-vol1
-plot1 <- eruptions_short %>% 
-  ggplot(aes(x= start_year, y= vei, colour = "red"))+ 
-           geom_point(aes(start_year, vei))
-plot1
+
+#plot1 <- eruptions_short %>% 
+#  ggplot(aes(x= start_year, y= vei, colour = "red"))+ 
+#           geom_point(aes(start_year, vei))
+#plot1
 
 eruption_wide <- eruptions_short %>% 
   distinct() %>% 
@@ -83,11 +111,79 @@ eruption_wide3
 
 ```
 
+## Present eruptions event on maps
 ```{r}
 
-unique(eruptions$volcano_name)
+install.load::install_load( "raster", "sf","maps", "terra", "ggspatial", "mapview")
+
+knitr::opts_chunk$set(warning = TRUE, # show warnings
+                      message = TRUE, # show messages
+                      error = TRUE, # do not interrupt generation in case of errors,
+                      echo = TRUE)
+
+# Load packages
+pcks <- list("dplyr", 
+             "sf",        # used for handling spatial data 
+             "ggspatial", # spatial for ggplot2 
+             "raster",    # used for raster data 
+             "terra",     # used for raster data
+             "mapview",   # interactive maps 
+             "tidyverse")
+
+sapply(pcks, require, char = TRUE) 
+
+
+volcano_points <- read_sf("volcano_point.shp")
+plot(volcano_points)
+```
+```
+volcano_points2<- volcano_points %>% 
+  mutate(
+    primary_vo= str_replace_all(primary_vo,"(es)", ""))
+    
+
+unique(volcano_points2$primary_vo)
+    
+    primary_ty= str_replace_all(primary_vo,regex("Stratovolcano?", ignore_case = TRUE), "Stratovolcano"),
+    primary_ty= str_replace_all(primary_vo,regex("Pyroclastic cone(s)", ignore_case = TRUE), "Pyroclastic cone"),
+    primary_ty= str_replace_all(primary_vo,regex("Shield(s)", ignore_case = TRUE), "Shield"),
+    primary_ty= str_replace_all(primary_vo,regex("Lava dome(s)", ignore_case = TRUE), "Lava dome"),
+    primary_ty= str_replace_all(primary_vo,regex("Lava cone(s)", ignore_case = TRUE), "Lava cone"),
+    primary_ty= str_replace_all(primary_vo,regex("Lava cone(es)", ignore_case = TRUE), "Lava cone"),
+    primary_ty= str_replace_all(primary_vo,regex("Tuff cone(s)", ignore_case = TRUE), "Tuff cone")
+  )
+
+volcano_points3<- volcano_points %>% 
+  mutate(
+    primary_vo= str_remove_all(primary_vo,"(es)"),
+    primary_vo= str_remove_all(primary_vo,"(s)"))
+
+unique(volcano_points3$primary_vo)
+
+
+    primary_ty= str_replace_all(primary_vo,regex("Stratovolcano?", ignore_case = TRUE), "Stratovolcano"),
+    primary_ty= str_replace_all(primary_vo,regex("Pyroclastic cone(s)", ignore_case = TRUE), "Pyroclastic cone"),
+    primary_ty= str_replace_all(primary_vo,regex("Shield(s)", ignore_case = TRUE), "Shield"),
+    primary_ty= str_replace_all(primary_vo,regex("Lava dome(s)", ignore_case = TRUE), "Lava dome"),
+    primary_ty= str_replace_all(primary_vo,regex("Lava cone(s)", ignore_case = TRUE), "Lava cone"),
+    primary_ty= str_replace_all(primary_vo,regex("Lava cone(es)", ignore_case = TRUE), "Lava cone"),
+    primary_ty= str_replace_all(primary_vo,regex("Tuff cone(s)", ignore_case = TRUE), "Tuff cone")
+  )
+View(volcano_points2)
+View(volcano_points2)
+unique(volcano_points2$primary_ty)
+```
+```{r}
+pal <-  mapviewPalette("mapviewVectorColors")
+mapview(volcano_points)
+volcano_points %>% 
+  mapview(zcol="primary_vo", 
+          col.regions = pal(26))
+  mapview()
+str(volcano_points)
 
 ```
+
 ## Quarto
 
 Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.

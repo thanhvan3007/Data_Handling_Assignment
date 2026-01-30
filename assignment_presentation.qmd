@@ -1,0 +1,170 @@
+---
+title: "Assginment"
+subtitle: "Data handlings and high-quality illustration for publication"
+author: Van Thanh Pham
+date: "2026-01-30"
+format: html
+theme: sandstone
+code-fold: false
+---
+
+```{r}
+#| include: true
+library(tidyverse)
+library(ggplot2)
+#install.packages("dplyr")
+library(dplyr)
+
+```
+
+## Input data
+
+In this assignment, I will only use two database: *eruptions* and *volcano*. The *volcano* database contains properties of each volcano in the world, while the *eruptions* database presents eruption events of them.
+
+```{r}
+#| echo: true
+#| warning: false
+#read data from csv
+eruptions <- read.csv("eruptions.csv") #read eruption.csv
+volcano <- read.csv("volcano.csv") #read volcano.csv
+head(eruptions) #check the data. 
+
+```
+
+## Manipulate data frame
+
+Since the database is big, it is necessary to filter the part of concern to present on graph. This time, I will consider only eruption events in 21st century (2001 until now).
+
+```{r}
+#| label: manipulate data
+#| echo: true
+eruptions_2000s <- eruptions %>% 
+  filter(eruption_category == "Confirmed Eruption") %>%  #only consider the confirmed eruptions
+  filter(start_year > 2000) %>%       #cut parts of 21st century
+  filter(vei !="NA") %>%            #only consider the known "vei" 
+  dplyr::select(volcano_name, vei, start_year,start_month, start_day, end_year, end_month, end_day)
+head(eruptions_2000s)
+
+```
+
+## Make wide table
+
+The *eruptions* database is purely long table. We can make a wide table that is easier to see.
+
+```{r}
+#| echo: true
+
+eruption_wide <- eruptions_2000s %>% 
+ # dplyr::select(volcano_name, eruption_category, start_year) %>% 
+  group_by(volcano_name) %>% 
+  mutate(row = row_number()) %>% 
+  dplyr::select(volcano_name,vei, start_year, row) %>% 
+  pivot_wider(names_from = start_year, values_from = vei) %>% 
+  dplyr::select(-row)
+head(eruption_wide)
+
+```
+
+## Create graph of eruption events
+
+```{r}
+
+
+eruptions_2000s <- eruptions_2000s %>% 
+  mutate('start_date'=make_date(year=start_year, month=start_month, day=start_day)) %>% 
+  mutate('end_date'=make_date(year=end_year, month=end_month, day=end_day)) %>% 
+  mutate('daycount' = difftime(end_date, start_date, units = "days")) %>% 
+  mutate('daycount' = daycount+1) #correct the day count (not only time different)
+
+#View(eruptions_2000s)
+
+#as.numeric(eruptions_2000s$daycount)
+library(RColorBrewer)
+plot1 <- eruptions_2000s %>% ggplot(mapping=aes(x=start_year, y=daycount)) +
+  geom_point(aes(size = vei, colour = vei))+
+  scale_x_continuous(name = "Year of eruption events", breaks = 1:10, limits = c(2000,2020)) +
+  scale_y_continuous(name = "Length of eruption (days)")+
+  ggtitle("Eruption events in 21st century by year") +
+  theme(plot.title.position = "plot") 
+
+
+plot1  
+
+```
+
+## Present volcano locations on interactive map
+
+```{r}
+#| echo: false
+#| warning: false
+
+install.load::install_load( "raster", "sf","maps", "terra", "ggspatial", "mapview")
+
+knitr::opts_chunk$set(warning = TRUE, # show warnings
+                      message = TRUE, # show messages
+                      error = TRUE, # do not interrupt generation in case of errors,
+                      echo = TRUE)
+
+# Load packages
+pcks <- list("dplyr", 
+             "sf",        # used for handling spatial data 
+             "ggspatial", # spatial for ggplot2 
+             "mapview",   # interactive maps 
+             "tidyverse")
+
+
+volcano_points <- read_sf("volcano_point.shp")
+
+pal <-  mapviewPalette("mapviewRasterColors") #set colour pallet. 
+#mapview(volcano_points)
+volcano_points %>% 
+  mapview(zcol="region", #colour by regions 
+          col.regions = pal(19)) #there are 19 unique values of regions
+
+#str(volcano_points)
+
+```
+
+```{r}
+install.packages('stringr')
+library(stringr)
+         
+volcano_points2<- volcano_points %>% 
+  mutate(
+    primary_vo= str_replace_all(primary_vo, fixed(c('Stratovolcano?' = 'Stratovolcano',
+                                                    "Stratovolcano(es)" = "Stratovolcano",
+                                                    'Pyroclastic cone(s)'= 'Pyroclastic cone',
+                                                    'Shield(s)' = 'Shield',
+                                                    'Lava dome(s)'= 'Lava dome',
+                                                    'Lava cone(es)' = 'Lava cone',
+                                                    'Lava cone(s)'= 'Lava cone',
+                                                    'Tuff cone(s)' =  'Tuff cone'))))
+
+unique(volcano_points2$primary_vo)
+    
+pal <-  mapviewPalette("mapviewRasterColors") #set colour pallet. 
+#mapview(volcano_points)
+volcano_points2 %>% 
+  mapview(zcol="primary_vo", #colour by regions 
+          col.regions = pal(18)) #there are 18 unique values of regions
+
+#str(volcano_points)
+
+```
+
+```
+
+## Reflection
+
+**What I learnt:**
+
+-   With the complete new dataset, it takes time in the beginning to explore and understand the data.
+-   There are challenges of cleaning data before working on, I learnt from internet sources.
+-   Therefore, there is a lot of things that I can improve: data cleaning, customizing the presentation, add more necessary elements to maps and graph.
+
+## Reflection
+
+**What I want to do but failed:**
+
+-   Failed to correct typos of observations in one column.
+-   Failed to bind eruptions with volcano due to different size.
