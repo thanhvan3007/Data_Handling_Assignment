@@ -16,6 +16,7 @@ library(ggplot2)
 library(dplyr)
 
 ```
+
 ```{r}
 eruptions <- read.csv("eruptions.csv") #read eruption.csv
 volcano <- read.csv("volcano.csv")
@@ -39,7 +40,8 @@ eruptions_2000s <- eruptions %>%
   select(volcano_name, vei, start_year,start_month, start_day, end_year, end_month, end_day) %>% 
   mutate('start_date'=make_date(year=start_year, month=start_month, day=start_day)) %>% 
   mutate('end_date'=make_date(year=end_year, month=end_month, day=end_day)) %>% 
-  mutate('daycount' = difftime(end_date, start_date, units = "days"))
+  mutate('daycount' = difftime(end_date, start_date, units = "days"))+
+  mutate('daycount' = daycount+1)
 
 
 as.numeric(eruptions_2000s$daycount) 
@@ -90,7 +92,8 @@ eruption_wide <- eruptions_short %>%
 eruption_wide
 
 ```
-## make wide talbe 
+
+## make wide talbe
 
 ```{r}
 
@@ -112,6 +115,7 @@ eruption_wide3
 ```
 
 ## Present eruptions event on maps
+
 ```{r}
 
 install.load::install_load( "raster", "sf","maps", "terra", "ggspatial", "mapview")
@@ -136,7 +140,8 @@ sapply(pcks, require, char = TRUE)
 volcano_points <- read_sf("volcano_point.shp")
 plot(volcano_points)
 ```
-```
+
+```         
 volcano_points2<- volcano_points %>% 
   mutate(
     primary_vo= str_replace_all(primary_vo,"(es)", ""))
@@ -173,6 +178,7 @@ View(volcano_points2)
 View(volcano_points2)
 unique(volcano_points2$primary_ty)
 ```
+
 ```{r}
 pal <-  mapviewPalette("mapviewVectorColors")
 mapview(volcano_points)

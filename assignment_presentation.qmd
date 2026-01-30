@@ -138,15 +138,20 @@ volcano_points2<- volcano_points %>%
                                                     'Lava dome(s)'= 'Lava dome',
                                                     'Lava cone(es)' = 'Lava cone',
                                                     'Lava cone(s)'= 'Lava cone',
-                                                    'Tuff cone(s)' =  'Tuff cone'))))
+                                                    'Tuff cone(s)' =  'Tuff cone',
+                                                    'Complex(es)' = 'Complex'))))
 
 unique(volcano_points2$primary_vo)
     
-pal <-  mapviewPalette("mapviewRasterColors") #set colour pallet. 
+pal <-  mapviewPalette("mapviewVectorColors") #set colour pallet. 
 #mapview(volcano_points)
 volcano_points2 %>% 
   mapview(zcol="primary_vo", #colour by regions 
-          col.regions = pal(18)) #there are 18 unique values of regions
+          col.regions = pal(17),
+          cex = 4,
+          alpha = 0.5, 
+          legend = TRUE
+          ) #there are 18 unique values of regions
 
 #str(volcano_points)
 
