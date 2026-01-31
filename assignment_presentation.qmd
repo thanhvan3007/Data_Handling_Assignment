@@ -3,12 +3,29 @@ title: "Assginment"
 subtitle: "Data handlings and high-quality illustration for publication"
 author: Van Thanh Pham
 date: "2026-01-30"
-format: html
-theme: sandstone
+format: 
+  html: 
+    toc: true
+    toc-depth: 2
+    toc-expand: true
+    toc-location: left
+    toc-title: "Contents"
+theme: sanstone
 code-fold: false
 ---
 
+# About input data
+
+In this assignment, I will only use two database: **eruptions** and **volcano**.
+
+The **volcano** database contains properties of each volcano in the world, while the **eruptions** database presents eruption events of them.
+
+Both database contain latitude and longitue, which can be plot on the map.
+
+## Load necessary library and read the data
+
 ```{r}
+#| warning: false
 #| include: true
 library(tidyverse)
 library(ggplot2)
@@ -17,17 +34,14 @@ library(dplyr)
 
 ```
 
-## Input data
-
-In this assignment, I will only use two database: *eruptions* and *volcano*. The *volcano* database contains properties of each volcano in the world, while the *eruptions* database presents eruption events of them.
-
 ```{r}
 #| echo: true
 #| warning: false
 #read data from csv
 eruptions <- read.csv("eruptions.csv") #read eruption.csv
 volcano <- read.csv("volcano.csv") #read volcano.csv
-head(eruptions) #check the data. 
+str(eruptions)
+str(volcano) #check the data. 
 
 ```
 
@@ -38,11 +52,12 @@ Since the database is big, it is necessary to filter the part of concern to pres
 ```{r}
 #| label: manipulate data
 #| echo: true
+#| warning: false
 eruptions_2000s <- eruptions %>% 
   filter(eruption_category == "Confirmed Eruption") %>%  #only consider the confirmed eruptions
   filter(start_year > 2000) %>%       #cut parts of 21st century
   filter(vei !="NA") %>%            #only consider the known "vei" 
-  dplyr::select(volcano_name, vei, start_year,start_month, start_day, end_year, end_month, end_day)
+  dplyr::select(volcano_number,volcano_name, vei, start_year,start_month, start_day, end_year, end_month, end_day, longitude, latitude)
 head(eruptions_2000s)
 
 ```
@@ -53,6 +68,7 @@ The *eruptions* database is purely long table. We can make a wide table that is 
 
 ```{r}
 #| echo: true
+#| warning: false
 
 eruption_wide <- eruptions_2000s %>% 
  # dplyr::select(volcano_name, eruption_category, start_year) %>% 
@@ -65,10 +81,25 @@ head(eruption_wide)
 
 ```
 
+# Visuallization
+
 ## Create graph of eruption events
 
-```{r}
++---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| In **eruption** database, there is two noticable numberic column *vei* and year, month, day of starting and ending moment of each event. I will use those data to present on a graph.                                           | ![Volcanic Explosivity Index (VEI) volume graphn](images/500px-VEIfigure_en.svg.png){width="200"}                                                                |
+|                                                                                                                                                                                                                                 |                                                                                                                                                                  |
+| First, I will merge \[..\]year, \[..\]month, \[..\]day column into one column *start_date* and *end_date*, then calculate the length of time in days between them, then plot.                                                   | By chris - Own work based on: <https://volcanoes.usgs.gov/Products/Pglossary/vei.html,> Public Domain, <https://commons.wikimedia.org/w/index.php?curid=3935253> |
+|                                                                                                                                                                                                                                 |                                                                                                                                                                  |
+| ***Note:*** The volcanic explosivity index (VEI) is a scale used to measure the size of explosive volcanic eruptions. It was devised by Christopher G. Newhall of the United States Geological Survey and Stephen Self in 1982. |                                                                                                                                                                  |
+|                                                                                                                                                                                                                                 |                                                                                                                                                                  |
+| VEI of 0.5 is 0.0001 km3 ejecta, not 0.00001 km3.Scale is logarithmic (powers of 10), see official USGS VEI scale.                                                                                                              |                                                                                                                                                                  |
+|                                                                                                                                                                                                                                 |                                                                                                                                                                  |
+| Source: <https://en.wikipedia.org/wiki/Volcanic_explosivity_index#>                                                                                                                                                             |                                                                                                                                                                  |
++---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
+\
+
+```{r}
 
 eruptions_2000s <- eruptions_2000s %>% 
   mutate('start_date'=make_date(year=start_year, month=start_month, day=start_day)) %>% 
@@ -76,27 +107,82 @@ eruptions_2000s <- eruptions_2000s %>%
   mutate('daycount' = difftime(end_date, start_date, units = "days")) %>% 
   mutate('daycount' = daycount+1) #correct the day count (not only time different)
 
-#View(eruptions_2000s)
-
-#as.numeric(eruptions_2000s$daycount)
 library(RColorBrewer)
+
 plot1 <- eruptions_2000s %>% ggplot(mapping=aes(x=start_year, y=daycount)) +
   geom_point(aes(size = vei, colour = vei))+
-  scale_x_continuous(name = "Year of eruption events", breaks = 1:10, limits = c(2000,2020)) +
+  scale_x_continuous(name = "Year of eruption events") +
   scale_y_continuous(name = "Length of eruption (days)")+
   ggtitle("Eruption events in 21st century by year") +
-  theme(plot.title.position = "plot") 
+  theme(plot.title.position = "plot")
 
+plot1
+```
 
-plot1  
+I want to add more information into the graph, so I will join **eruption** with **volcano** tables to extract more information about the volcano. Color of points is set to the type of primary volcano. Select "Set2" which is color blind-friendly.
+
+```{r}
+#|warning: false
+#|echo: true
+
+eruptions_2000s_2 <- left_join(eruptions_2000s, volcano, 
+                               by = "volcano_name", relationship = "many-to-many") 
+#as.numeric(eruptions_2000s$daycount)
+
+plot2 <- eruptions_2000s_2 %>% ggplot(mapping=aes(x=start_year, y=daycount)) +
+  geom_point(aes(size = vei, colour = primary_volcano_type))+
+  scale_colour_brewer(palette = "Set2") +
+  scale_x_continuous(name = "Year of eruption events") +
+  scale_y_continuous(name = "Length of eruption (days)")+
+  ggtitle("Eruption events in 21st century by year") +
+  theme(plot.title.position = "plot")
+plot2
 
 ```
 
-## Present volcano locations on interactive map
+The problem appears when there are some similar values of *primary_volcano_type* due to the typos. This needs to be clean before plotting.
 
 ```{r}
-#| echo: false
 #| warning: false
+eruptions_2000s_3<- eruptions_2000s_2 %>% 
+  mutate(
+    primary_volcano_type= str_replace_all(primary_volcano_type,
+                                          fixed(c('Stratovolcano?' = 'Stratovolcano',
+                                                  'Stratovolcano(es)' = 'Stratovolcano',
+                                                  'Pyroclastic cone(s)'= 'Pyroclastic cone',
+                                                  'Shield(s)' = 'Shield',
+                                                  'Lava dome(s)'= 'Lava dome',
+                                                  'Lava cone(es)' = 'Lava cone',
+                                                  'Lava cone(s)'= 'Lava cone',
+                                                  'Tuff cone(s)' =  'Tuff cone',
+                                                  'Complex(es)' = 'Complex'))))
+unique(eruptions_2000s_3$primary_volcano_type)
+```
+
+Then re-do the plotting. But since "Set2" palette has only 8 colors while the field *primary_volcano_type* has 9 value, including NA, I will change the color palette, which is still colorblind-friendly with more value.
+
+```{r}
+#| echo: true
+#| warning: false
+
+plot3 <- eruptions_2000s_3 %>% ggplot(mapping=aes(x=start_year, y=daycount)) +
+  geom_point(aes(size = vei, colour = primary_volcano_type))+
+  scale_colour_viridis_d(option = "D") +
+  scale_x_continuous(name = "Year of eruption events") +
+  scale_y_continuous(name = "Length of eruption (days)")+
+  ggtitle("Eruption events in 21st century by year") +
+  theme(plot.title.position = "plot")
+plot3
+
+```
+
+## Present the eruption events in 2000s on interactive map
+
+```{r}
+#| echo: true
+#| warning: false
+
+#Load necessary packages
 
 install.load::install_load( "raster", "sf","maps", "terra", "ggspatial", "mapview")
 
@@ -112,64 +198,73 @@ pcks <- list("dplyr",
              "mapview",   # interactive maps 
              "tidyverse")
 
-
-volcano_points <- read_sf("volcano_point.shp")
-
-pal <-  mapviewPalette("mapviewRasterColors") #set colour pallet. 
-#mapview(volcano_points)
-volcano_points %>% 
-  mapview(zcol="region", #colour by regions 
-          col.regions = pal(19)) #there are 19 unique values of regions
-
-#str(volcano_points)
-
 ```
 
 ```{r}
-install.packages('stringr')
-library(stringr)
-         
-volcano_points2<- volcano_points %>% 
-  mutate(
-    primary_vo= str_replace_all(primary_vo, fixed(c('Stratovolcano?' = 'Stratovolcano',
-                                                    "Stratovolcano(es)" = "Stratovolcano",
-                                                    'Pyroclastic cone(s)'= 'Pyroclastic cone',
-                                                    'Shield(s)' = 'Shield',
-                                                    'Lava dome(s)'= 'Lava dome',
-                                                    'Lava cone(es)' = 'Lava cone',
-                                                    'Lava cone(s)'= 'Lava cone',
-                                                    'Tuff cone(s)' =  'Tuff cone',
-                                                    'Complex(es)' = 'Complex'))))
+#| echo: true
+#| warning: false
 
-unique(volcano_points2$primary_vo)
-    
+eruptions_2000s_shp <- st_as_sf(eruptions_2000s_3,
+                              coords = c("longitude.x", "latitude.x"),
+                              crs = 4326) #CRS for world map (WGS84)
+
 pal <-  mapviewPalette("mapviewVectorColors") #set colour pallet. 
+str(eruptions_2000_shp)
 #mapview(volcano_points)
-volcano_points2 %>% 
-  mapview(zcol="primary_vo", #colour by regions 
-          col.regions = pal(17),
-          cex = 4,
+map1 <- eruptions_2000s_shp %>%
+  mapview(zcol="primary_volcano_type", #colour by volcano type
+          col.regions = pal(8), 
+          cex = "vei", #size of points by vei 
+          alpha = 0.5, 
+          legend = TRUE) 
+map1
+```
+
+## Present location of all volcanoes
+
+Instead of showing map of eruptions in 21st century, we can also show another map with all volcano in the world:
+
+```{r}
+#| echo: true
+#| warning: false
+volcano_points <- st_as_sf(volcano,
+                           coords = c("longitude", "latitude"),
+                           crs = 4326) #CRS for world map (WGS84) 
+
+
+volcano_points2<- volcano_points %>% 
+  mutate(primary_volcano_type= 
+           str_replace_all(primary_volcano_type, #clean data, similar to above
+                                fixed(c('Stratovolcano?' = 'Stratovolcano',
+                                        'Stratovolcano(es)' = 'Stratovolcano',
+                                        'Pyroclastic cone(s)'= 'Pyroclastic cone',
+                                        'Shield(s)' = 'Shield',
+                                        'Lava dome(s)'= 'Lava dome',
+                                        'Lava cone(es)' = 'Lava cone',
+                                        'Lava cone(s)'= 'Lava cone',
+                                        'Tuff cone(s)' =  'Tuff cone',
+                                        'Complex(es)' = 'Complex',
+                                        'Caldera(s)' = 'Caldera'))))
+
+unique(volcano_points2$primary_volcano_type)
+
+pal2 <-  mapviewPalette("mapviewVectorColors") #set colour palette. 
+
+map2 <- volcano_points2 %>% 
+  mapview(zcol="primary_volcano_type", #colour by regions 
+          col.regions = pal(14), #there are 14 unique values of types
+          cex = 3,
+          stroke = 0.5,
           alpha = 0.5, 
           legend = TRUE
-          ) #there are 18 unique values of regions
-
-#str(volcano_points)
-
+          )
+map2
 ```
 
-```
-
-## Reflection
+# Reflection
 
 **What I learnt:**
 
 -   With the complete new dataset, it takes time in the beginning to explore and understand the data.
 -   There are challenges of cleaning data before working on, I learnt from internet sources.
 -   Therefore, there is a lot of things that I can improve: data cleaning, customizing the presentation, add more necessary elements to maps and graph.
-
-## Reflection
-
-**What I want to do but failed:**
-
--   Failed to correct typos of observations in one column.
--   Failed to bind eruptions with volcano due to different size.
