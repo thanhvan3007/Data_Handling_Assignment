@@ -2,7 +2,7 @@
 title: "Assginment"
 subtitle: "Data handlings and high-quality illustration for publication"
 author: Van Thanh Pham
-date: "2026-01-30"
+date: "2026-01-31"
 format: 
   html: 
     toc: true
@@ -100,6 +100,8 @@ head(eruption_wide)
 \
 
 ```{r}
+#| echo: true
+#| warning: false
 
 eruptions_2000s <- eruptions_2000s %>% 
   mutate('start_date'=make_date(year=start_year, month=start_month, day=start_day)) %>% 
@@ -156,7 +158,7 @@ eruptions_2000s_3<- eruptions_2000s_2 %>%
                                                   'Lava cone(s)'= 'Lava cone',
                                                   'Tuff cone(s)' =  'Tuff cone',
                                                   'Complex(es)' = 'Complex'))))
-unique(eruptions_2000s_3$primary_volcano_type)
+unique(eruptions_2000s_3$primary_volcano_type) #check the values
 ```
 
 Then re-do the plotting. But since "Set2" palette has only 8 colors while the field *primary_volcano_type* has 9 value, including NA, I will change the color palette, which is still colorblind-friendly with more value.
@@ -209,8 +211,7 @@ eruptions_2000s_shp <- st_as_sf(eruptions_2000s_3,
                               crs = 4326) #CRS for world map (WGS84)
 
 pal <-  mapviewPalette("mapviewVectorColors") #set colour pallet. 
-str(eruptions_2000_shp)
-#mapview(volcano_points)
+
 map1 <- eruptions_2000s_shp %>%
   mapview(zcol="primary_volcano_type", #colour by volcano type
           col.regions = pal(8), 
@@ -246,7 +247,7 @@ volcano_points2<- volcano_points %>%
                                         'Complex(es)' = 'Complex',
                                         'Caldera(s)' = 'Caldera'))))
 
-unique(volcano_points2$primary_volcano_type)
+unique(volcano_points2$primary_volcano_type) #check the values again
 
 pal2 <-  mapviewPalette("mapviewVectorColors") #set colour palette. 
 
